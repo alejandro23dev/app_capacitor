@@ -9,10 +9,12 @@ type User = {
 };
 
 type AlertType = "success" | "error";
+type AuthMode = "login" | "register";
 
 function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -142,7 +144,8 @@ function App() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const isRegistering = authMode === "register";
+      const response = await fetch(`${API_URL}/api/auth/${isRegistering ? "register" : "login"}`, {
         method: "POST",
 
         headers: {
@@ -188,22 +191,19 @@ function App() {
       // ================================================
 
       setUser(data.user);
-
       setPassword("");
-
       setAlert({
         type: "success",
-        message: data.message || "Inicio de sesión correcto.",
+        message: data.message || (isRegistering ? "Cuenta creada correctamente." : "Inicio de sesi\u00f3n correcto."),
       });
 
-      // Esperamos un poco para que el usuario vea
-      // el mensaje de éxito.
-      setTimeout(() => {
-        // Cambia esto por la ruta real de tu aplicación.
-        window.location.href = "/dashboard";
-      }, 700);
+      if (!isRegistering) {
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 700);
+      }
     } catch (error) {
-      console.error("LOGIN ERROR:", error);
+      console.error(`${authMode.toUpperCase()} ERROR:`, error);
 
       setAlert({
         type: "error",
@@ -442,9 +442,9 @@ function App() {
                 </svg>
               </div>
 
-              <h2>Bienvenido de nuevo</h2>
+              <h2>{authMode === "login" ? "Bienvenido de nuevo" : "Crea tu cuenta"}</h2>
 
-              <p>Introduce tus credenciales para continuar</p>
+              <p>{authMode === "login" ? "Introduce tus credenciales para continuar" : "Regístrate para empezar a utilizar Nova"}</p>
             </div>
 
             {/* ==========================================
@@ -520,7 +520,7 @@ function App() {
                 <div className="label-row">
                   <label htmlFor="password">Contraseña</label>
 
-                  <a
+                  {authMode === "login" && <a
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
@@ -533,7 +533,7 @@ function App() {
                     }}
                   >
                     ¿Has olvidado tu contraseña?
-                  </a>
+                  </a>}
                 </div>
 
                 <div className="input-wrapper">
@@ -561,7 +561,7 @@ function App() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Introduce tu contraseña"
-                    autoComplete="current-password"
+                    autoComplete={authMode === "register" ? "new-password" : "current-password"}
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
@@ -637,13 +637,13 @@ function App() {
                   REMEMBER
               ======================================== */}
 
-              <label className="remember">
+              {authMode === "login" && <label className="remember">
                 <input type="checkbox" disabled={loading} />
 
                 <span className="custom-checkbox"></span>
 
                 <span>Recordarme en este dispositivo</span>
-              </label>
+              </label>}
 
               {/* ========================================
                   LOGIN BUTTON
@@ -657,11 +657,11 @@ function App() {
                 {loading ? (
                   <>
                     <span className="spinner"></span>
-                    Iniciando sesión...
+                    {authMode === "register" ? "Creando cuenta..." : "Iniciando sesi\u00f3n..."}
                   </>
                 ) : (
                   <>
-                    Iniciar sesión
+                    {authMode === "register" ? "Crear cuenta" : "Iniciar sesi\u00f3n"}
                     <svg viewBox="0 0 24 24" fill="none">
                       <path
                         d="M5 12H19"
@@ -683,11 +683,11 @@ function App() {
               </button>
             </form>
 
-            <div className="divider">
+              {authMode === "login" && <div className="divider">
               <span>o continúa con</span>
-            </div>
+              </div>}
 
-            <button
+            {authMode === "login" && <button
               className="social-login"
               type="button"
               onClick={() => {
@@ -720,23 +720,21 @@ function App() {
                 />
               </svg>
               Continuar con Google
-            </button>
+            </button>}
 
             <p className="register">
-              ¿Todavía no tienes una cuenta?
+              {authMode === "login" ? "\u00bfTodav\u00eda no tienes una cuenta?" : "\u00bfYa tienes una cuenta?"}
               <a
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-
-                  setAlert({
-                    type: "error",
-                    message:
-                      "El registro todavía no está conectado a esta vista.",
-                  });
+                  setAuthMode(authMode === "login" ? "register" : "login");
+                  setAlert(null);
+                  setPassword("");
+                  setShowPassword(false);
                 }}
               >
-                Crear una cuenta
+                {authMode === "login" ? "Crear una cuenta" : "Iniciar sesi\u00f3n"}
               </a>
             </p>
 
