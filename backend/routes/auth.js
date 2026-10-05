@@ -99,16 +99,16 @@ router.post("/register", async (req, res) => {
     // Comprobar si existe
     // -----------------------------
 
-    const usuarioExistente = await pool.query(
+    const [usuariosExistentes] = await pool.query(
       `
       SELECT id
       FROM users
-      WHERE LOWER(username) = LOWER($1)
+      WHERE LOWER(username) = LOWER(?)
       `,
       [usernameClean]
     );
 
-    if (usuarioExistente.rows.length > 0) {
+    if (usuariosExistentes.length > 0) {
       return res.status(409).json({
         success: false,
         message: "Ese nombre de usuario ya está registrado.",
@@ -125,16 +125,18 @@ router.post("/register", async (req, res) => {
     // Crear usuario
     // -----------------------------
 
-    const resultado = await pool.query(
+    const [resultado] = await pool.query(
       `
       INSERT INTO users (username, password)
-      VALUES ($1, $2)
-      RETURNING id, username, created_at
+      VALUES (?, ?)
       `,
       [usernameClean, passwordHash]
     );
 
-    const user = resultado.rows[0];
+    const user = {
+      id: resultado.insertId,
+      username: usernameClean,
+    };
 
     // -----------------------------
     // Crear sesión
@@ -208,25 +210,25 @@ router.post("/login", async (req, res) => {
     // Buscar usuario
     // -----------------------------
 
-    const resultado = await pool.query(
+    const [usuarios] = await pool.query(
       `
       SELECT id, username, password
       FROM users
-      WHERE LOWER(username) = LOWER($1)
+      WHERE LOWER(username) = LOWER(?)
       `,
       [usernameClean]
     );
 
     // Importante:
     // No decimos si el usuario existe o no.
-    if (resultado.rows.length === 0) {
+    if (usuarios.length === 0) {
       return res.status(401).json({
         success: false,
         message: "Usuario o contraseña incorrectos.",
       });
     }
 
-    const user = resultado.rows[0];
+    const user = usuarios[0];
 
     // -----------------------------
     // Comparar contraseña
@@ -327,16 +329,16 @@ router.get("/me", async (req, res) => {
     // Buscar usuario en BD
     // -----------------------------
 
-    const resultado = await pool.query(
+    const [usuarios] = await pool.query(
       `
       SELECT id, username, created_at
       FROM users
-      WHERE id = $1
+      WHERE id = ?
       `,
       [decoded.id]
     );
 
-    if (resultado.rows.length === 0) {
+    if (usuarios.length === 0) {
       return res.status(401).json({
         success: false,
         authenticated: false,
@@ -344,7 +346,7 @@ router.get("/me", async (req, res) => {
       });
     }
 
-    const user = resultado.rows[0];
+    const user = usuarios[0];
 
     return res.status(200).json({
       success: true,
