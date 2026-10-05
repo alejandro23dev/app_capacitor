@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import AppLoadingScreen from "./AppLoadingScreen";
 
 const API_URL = "http://localhost:3000";
 
@@ -31,33 +32,44 @@ function App() {
   // Comprobar si ya existe una sesión
   // =====================================================
 
-  useEffect(() => {
-    comprobarSesion();
-  }, []);
+  async function comprobarSesion(): Promise<User | null> {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
 
-  async function comprobarSesion() {
     try {
       const response = await fetch(`${API_URL}/api/auth/me`, {
         method: "GET",
         credentials: "include",
+        signal: controller.signal,
       });
-
       const data = await response.json();
 
       if (response.ok && data.authenticated) {
-        setUser(data.user);
-
-        // Si ya está autenticado, puedes mandarlo al dashboard.
-        // Descomenta esta línea cuando tengas creada esa ruta.
-        //
-        // window.location.href = "/dashboard";
+        return data.user as User;
       }
     } catch (error) {
-      console.error("Error comprobando sesión:", error);
+      console.error("Error comprobando sesi\u00f3n:", error);
     } finally {
-      setCheckingSession(false);
+      window.clearTimeout(timeoutId);
     }
+
+    return null;
   }
+
+  useEffect(() => {
+    let active = true;
+
+    void comprobarSesion().then((sessionUser) => {
+      if (active) {
+        setUser(sessionUser);
+        setCheckingSession(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // =====================================================
   // Validación frontend
@@ -247,20 +259,7 @@ function App() {
   // =====================================================
 
   if (checkingSession) {
-    return (
-      <main className="login-page">
-        <div className="background">
-          <div className="glow glow-one"></div>
-          <div className="glow glow-two"></div>
-          <div className="grid"></div>
-        </div>
-
-        <div className="initial-loader">
-          <div className="spinner"></div>
-          <span>Comprobando sesión...</span>
-        </div>
-      </main>
-    );
+    return <AppLoadingScreen />;
   }
 
   // =====================================================
@@ -349,7 +348,7 @@ function App() {
               <span></span>
             </div>
 
-            <span>Nova</span>
+            <span>Mi Garage</span>
           </div>
 
           <div className="showcase-content">
@@ -415,7 +414,7 @@ function App() {
                 <span></span>
               </div>
 
-              <span>Nova</span>
+              <span>Mi Garage</span>
             </div>
 
             <div className="login-header">
@@ -444,7 +443,7 @@ function App() {
 
               <h2>{authMode === "login" ? "Bienvenido de nuevo" : "Crea tu cuenta"}</h2>
 
-              <p>{authMode === "login" ? "Introduce tus credenciales para continuar" : "Regístrate para empezar a utilizar Nova"}</p>
+              <p>{authMode === "login" ? "Introduce tus credenciales para continuar" : "Regístrate para empezar a utilizar Mi Garage"}</p>
             </div>
 
             {/* ==========================================
